@@ -1,0 +1,172 @@
+---
+title: "Diagnóstico Promotoria"
+author: "Carlos Eduardo Targino"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    source-code: embed
+    navbar:
+        - {title: "Sobre o autor", href: "https://github.com/cadutargino/"}
+   
+---
+
+```{r setup, include=FALSE}
+
+# O include=FALSE serve para indicar que vamos rodar esse pedaço do codigo
+# mas nem o código nem a saída são exibidos no arquivo.
+
+library(readr)
+library(ggplot2)
+library(plotly)
+library(flexdashboard)
+library(DT)
+library(tidyverse)
+library(highcharter)
+library(plotly)
+
+df <- readRDS("df.rds")
+
+```
+
+# Visualizações {data-icon="fa-signal"} 
+
+## Barra Lateral 1 { .sidebar} 
+
+```{r}
+inputPanel(
+  selectInput("peca", label = h4("Selecione a peça:"),
+    choices = list("denúncia", "arquivamento", "contrarrazões", "memorial", "parecer", "ato_racionalização", "cota","parecer_protetiva", "prorrogação", "réplica","representação", "todas"), selected = "todas"))
+
+
+dados <- reactive({
+  
+  df_1 <- df |> 
+    filter(ano == 2021) |>  
+    filter(str_detect(peca, ifelse(input$peca ==  "todas", "", input$peca)))  
+    
+  return(df_1)})
+
+```
+
+
+
+
+## Column (data-width=500)
+
+### Comparativo 2ª PJ Conchas x 4ª PJ São Sebastião (jan - abr 2021)
+```{r}
+renderPlotly({
+  
+grafico = ggplot(
+  
+  data = dados(),
+    aes(x = data, fill = peca)) +
+    geom_histogram(bins = 30L) +
+    scale_fill_brewer(palette = "Set3", direction = 1) +
+    labs(
+        title = "Volume de peças por área",
+        subtitle = "Conchas vs São Sebatião"
+    ) +
+    hrbrthemes::theme_ipsum_rc() +
+    facet_wrap(vars(comarca))
+
+  ggplotly(grafico)
+})
+
+```
+
+## Column {data-width=500}
+
+### Volume de peças ao longo do tempo 
+```{r}
+dados2 <- reactive({
+  
+  df_2 <- df |> 
+    group_by(comarca, data) |>  
+    filter(str_detect(peca, ifelse(input$peca ==  "todas", "", input$peca))) |> 
+    count()
+    
+  return(df_2)})
+
+
+
+renderHighchart({
+  
+
+dados2() %>%
+    hchart('column', hcaes(x = 'data', y = 'n', group = "comarca")) %>% 
+    hc_title(text = "2ª PJ Conchas x 4ª PJ São Sebastião") %>%
+    hc_subtitle(text = "Volume de peças 2020 - abril/2021") %>% 
+    hc_yAxis(title = list(text = "Número de peças")) 
+})
+```
+    
+
+
+# Relatórios Mensais {data-table=row data-icon="fa-list"}
+
+## Barra Lateral 2 {.sidebar} {data-width=200} 
+
+```{r}
+inputPanel(
+  selectInput("Promotoria", label = h3("Selecione a Promotoria:"),
+    choices = list("Conchas", "São Sebastião"), selected = "São Sebastião"))
+
+
+inputPanel(
+  selectInput("mes", label = h3("Selecione mês:"),
+    choices = list("Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez", "todas")))
+
+inputPanel(
+  selectInput("ano", label = h3("Selecione ano:"),
+    choices = list("2020", "2021"), selected = "2021"))
+
+dados3 <- reactive({
+  
+  df_3 <- df |> 
+    filter(ano==as.numeric(input$ano)) |>  
+    filter(mes==input$mes) |> 
+    filter(str_detect(comarca, ifelse(input$Promotoria == "São Sebastião", "Sebast", input$Promotoria))) 
+    
+  return(df_3)})
+
+```
+
+
+
+Column {style="height:100pc;"}
+--------------------------------------------------------
+
+### Relatório Mensal
+
+```{r}
+
+renderDataTable({
+dados3() %>% 
+    group_by(mes, ano, area, peca) %>% 
+    count() |> 
+    select(area, peca, n) |> 
+DT::datatable(options = list(pageLength = 12))
+})
+```
+
+
+Column {style="height:100pc;"}
+--------------------------------------------------------
+### Lista de processos do mês selecionado
+
+
+```{r}
+
+renderDataTable({
+dados3() %>% 
+    select(comarca, area, peca, nomes) |> 
+     
+DT::datatable(options = list(pageLength = 12))
+})
+
+
+```
+
