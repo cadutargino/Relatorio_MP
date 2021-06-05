@@ -1,48 +1,6 @@
 ## O OBJETIVO É CLASSIFICAR AS PEÇAS PROCESSUAIS PRODUZIDAS MÊS A MÊS E ELABORAR UM DASHBOARD
 library(magrittr)
 
-relat <- function(endereco) {
-# Faz um dataframe na pasta do mês
-library(tidyverse)
-arquivos <- list.files(path = endereco, full.names = FALSE)
-relatorio <- tibble(nomes = arquivos, 
-             processo = str_extract(nomes, "\\d+.\\d+.\\d+"),
-             peca = case_when(
-                 str_detect(nomes, "(?i)parec+.") ~ "parecer",
-                 str_detect(nomes, "(?i)arq+.") ~ "arquivamento",
-                 str_detect(nomes, "(?i)CRR+.|(?i)contrarraz+.") ~ "contrarrazões",
-                 str_detect(nomes, "(?i)ato+.|(?i)racionaliza+.") ~ "ato_racionalização",
-                 str_detect(nomes, "(?i)previ+.") ~ "previdenciário",
-                 str_detect(nomes, "(?i)den+.|(?i)CRDen+.") ~ "denúncia",
-                 str_detect(nomes, "(?i)mem+.|(?i)aleg") ~ "memorial",
-                 str_detect(nomes, "(?i)proteti+.") ~ "parecer_protetiva",
-                 str_detect(nomes, "(?i)repli+.") ~ "réplica",
-                 str_detect(nomes, "(?i)rep+.") ~ "representação",
-                 str_detect(nomes, "(?i)prorroga..o+.") ~ "prorrogação",
-                 str_detect(nomes, "(?i)cota+.") ~ "cota",
-                 TRUE ~ "cota"
-             ),
-             área = case_when(
-                 str_detect(processo, "^43+.|^62+.|^14+.") ~ "difusos",
-                 str_detect(nomes, "^(?i)Ci+.|(?i)civel+.|(?i)interdi..o+.") ~ "cível",
-                 str_detect(nomes, "^(?i)Cr+.|(?i)delpol+.|(?i)retorno+.|(?i)CRR+.|(?i)criminal+.") ~ "criminal",
-                 str_detect(peca, "denúncia") ~ "criminal",
-                 str_detect(nomes, "^(?i)DC+.") ~ "difusos",
-                 str_detect(nomes, "(?i)ACP+.|(?i)popular+.") ~ "difusos_ACP",
-                 str_detect(nomes, "^(?i)Ij+.|(?i)inf.ncia+.|(?i)prote..o+.|(?i)acolhimento+.") ~ "infancia",
-                 str_detect(nomes, "(?i)jecrim+.|(?i)transacao+.|(?i)supens..o+.") ~ "criminal_JECRIM",
-                 str_detect(processo, "^15+.") ~ "criminal",
-                 str_detect(processo, "^100+.") ~ "cível",
-                 str_detect(peca, "(?i)representação+.|(?i)prorroga..o+.") ~ "difusos",
-                 TRUE ~ "desconhecido"
-             )
-)%>%
-    group_by(processo, peca) %>%
-    slice(1) %>% 
-    ungroup()
-relatorio
-}
-
 arruma_base <- function(caminho = getwd()){
     # Faz um data frame geral dos arquivos da PJ, com colunas de anos e meses 
     # o path, deve conter em seu interior APENAS pastas individuais com cada ano no formato XXXX, "ex.: 2020", e dentro delas, 
